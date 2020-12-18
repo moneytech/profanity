@@ -44,6 +44,10 @@
 
 #include <glib.h>
 
+//TODO: ifdef
+#include <gdk-pixbuf/gdk-pixbuf.h>
+#include <chafa.h>
+
 #ifdef HAVE_NCURSESW_NCURSES_H
 #include <ncursesw/ncurses.h>
 #elif HAVE_NCURSES_H
@@ -1952,4 +1956,46 @@ win_insert_last_read_position_marker(ProfWin* window, char* id)
     win_redraw(window);
 
     g_date_time_unref(time);
+}
+
+#define PIX_WIDTH 3
+#define PIX_HEIGHT 3
+#define N_CHANNELS 4
+void
+win_pictest(ProfWin* window)
+{
+    GdkPixbuf *file = gdk_pixbuf_new_from_file ("/home/michael/Pictures/test.png", NULL);
+    if (file == NULL) {
+        win_println(window, THEME_ERROR, "!", "pictest");
+        return;
+    }
+    ChafaCanvasConfig *config;
+    ChafaCanvas *canvas;
+    ChafaSymbolMap *symbol_map;
+
+    symbol_map = chafa_symbol_map_new ();
+    //chafa_symbol_map_add_by_tags (symbol_map, CHAFA_SYMBOL_TAG_ALL);
+    chafa_symbol_map_add_by_tags (symbol_map, CHAFA_SYMBOL_TAG_ASCII);
+    //chafa_symbol_map_add_by_tags (symbol_map, CHAFA_SYMBOL_TAG_BRAILLE);
+    //chafa_symbol_map_add_by_tags (symbol_map, CHAFA_SYMBOL_TAG_BLOCK | CHAFA_SYMBOL_TAG_BORDER);
+
+    config = chafa_canvas_config_new ();
+    //chafa_canvas_config_set_geometry (config, 23, 12);
+    chafa_canvas_config_set_geometry (config, 100, 65);
+    chafa_canvas_config_set_symbol_map (config, symbol_map);
+    // mono for now (no escape code)
+    chafa_canvas_config_set_canvas_mode (config, CHAFA_CANVAS_MODE_FGBG);
+
+    canvas = chafa_canvas_new (config);
+
+    guchar *pixels = gdk_pixbuf_get_pixels (file);
+    chafa_canvas_draw_all_pixels (canvas,
+                                  CHAFA_PIXEL_RGBA8_UNASSOCIATED,
+                                  pixels,
+                                  PIX_WIDTH,
+                                  PIX_HEIGHT,
+                                  PIX_WIDTH * N_CHANNELS);
+
+    GString *gs = chafa_canvas_build_ansi (canvas);
+    win_print(window, THEME_DEFAULT, "!", gs->str);
 }
